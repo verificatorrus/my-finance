@@ -7,7 +7,8 @@ const config: CapacitorConfig = {
   server: {
     // For production, the app will use the Cloudflare Workers API
     // Update this URL to your production Cloudflare Workers domain
-    url: 'https://my-finance.pages.dev',
+    // url: 'my-finance.quicpro.workers.dev', // Production
+    url: 'my-finance-dev.quicpro.workers.dev',  // Development
     cleartext: false
   },
   android: {
