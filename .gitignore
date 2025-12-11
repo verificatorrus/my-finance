@@ -27,5 +27,13 @@ dist-ssr
 .wrangler
 .dev.vars*
 !.dev.vars.example
+.env.prod*
 .env*
 !.env.example
+
+# Capacitor
+android/app/build
+android/app/release
+android/.gradle
+android/build
+android/local.properties
