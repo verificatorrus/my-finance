@@ -1,57 +1,86 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import cloudflareLogo from './assets/Cloudflare_Logo.svg'
-import './App.css'
+import {
+  Container,
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Stack,
+  Chip,
+} from '@mui/material'
+import AddIcon from '@mui/icons-material/Add'
+import CloudIcon from '@mui/icons-material/Cloud'
 
 function App() {
   const [count, setCount] = useState(0)
   const [name, setName] = useState('unknown')
 
   return (
-    <>
-      <div>
-        <a href='https://vite.dev' target='_blank'>
-          <img src={viteLogo} className='logo' alt='Vite logo' />
-        </a>
-        <a href='https://react.dev' target='_blank'>
-          <img src={reactLogo} className='logo react' alt='React logo' />
-        </a>
-        <a href='https://workers.cloudflare.com/' target='_blank'>
-          <img src={cloudflareLogo} className='logo cloudflare' alt='Cloudflare logo' />
-        </a>
-      </div>
-      <h1>Vite + React + Cloudflare</h1>
-      <div className='card'>
-        <button
-          onClick={() => setCount((count) => count + 1)}
-          aria-label='increment'
-        >
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <div className='card'>
-        <button
-          onClick={() => {
-            fetch('/api/')
-              .then((res) => res.json() as Promise<{ name: string }>)
-              .then((data) => setName(data.name))
-          }}
-          aria-label='get name'
-        >
-          Name from API is: {name}
-        </button>
-        <p>
-          Edit <code>worker/index.ts</code> to change the name
-        </p>
-      </div>
-      <p className='read-the-docs'>
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Container maxWidth="md">
+      <Box sx={{ my: 4, textAlign: 'center' }}>
+        <Stack direction="row" spacing={2} justifyContent="center" mb={3}>
+          <Chip label="Vite" color="primary" variant="outlined" />
+          <Chip label="React 19" color="secondary" variant="outlined" />
+          <Chip label="Cloudflare" color="success" variant="outlined" />
+          <Chip label="MUI 7" color="info" variant="outlined" />
+        </Stack>
+
+        <Typography variant="h2" component="h1" gutterBottom>
+          My Finance
+        </Typography>
+
+        <Typography variant="h5" color="text.secondary" gutterBottom>
+          Modern Finance Management App
+        </Typography>
+
+        <Card sx={{ mt: 4, mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Counter Demo
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setCount((count) => count + 1)}
+              size="large"
+            >
+              Count is {count}
+            </Button>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Edit <code>src/App.tsx</code> and save to test HMR
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Cloudflare Workers API
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<CloudIcon />}
+              onClick={() => {
+                fetch('/api/')
+                  .then((res) => res.json() as Promise<{ name: string }>)
+                  .then((data) => setName(data.name))
+              }}
+              size="large"
+            >
+              Name from API: {name}
+            </Button>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Edit <code>worker/index.ts</code> to change the name
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 4 }}>
+          Built with Material UI v7
+        </Typography>
+      </Box>
+    </Container>
   )
 }
 
