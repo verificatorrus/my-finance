@@ -1,12 +1,125 @@
-export default {
-  fetch(request) {
-    const url = new URL(request.url);
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { 
+  verifyFirebaseAuth, 
+  VerifyFirebaseAuthConfig,
+  VerifyFirebaseAuthEnv,
+  getFirebaseToken
+} from '@hono/firebase-auth'
+import { drizzle } from 'drizzle-orm/d1'
+import { eq } from 'drizzle-orm'
+import { users } from '../db/schema'
+import { userRoutes } from './routes/user'
+import { walletRoutes } from './routes/wallet'
+import { currencyRoutes } from './routes/currency'
+import { transactionRoutes } from './routes/transaction'
 
-    if (url.pathname.startsWith("/api/")) {
-      return Response.json({
-        name: "Cloudflare",
-      });
+type Bindings = VerifyFirebaseAuthEnv & {
+  DB: D1Database
+}
+
+const app = new Hono<{ Bindings: Bindings }>()
+
+// Only handle /api routes
+app.use('/api/*', async (c, next) => {
+  // CORS for API routes
+  const origin = c.req.header('origin') || '*'
+  c.header('Access-Control-Allow-Origin', origin)
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  
+  if (c.req.method === 'OPTIONS') {
+    return c.text('', 204)
+  }
+  
+  await next()
+})
+
+// Helper function to create a short hash of kid for KV key
+async function hashKid(kid: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(kid)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32)
+}
+
+// Firebase Auth configuration
+const firebaseAuthConfig: VerifyFirebaseAuthConfig = {
+  projectId: 'my-finace-dev',
+  authorizationHeaderKey: 'Authorization',
+  keyStoreInitializer: (c) => {
+    return {
+      get: async (kid: string) => {
+        const cache = c.env.PUBLIC_JWK_CACHE_KV
+        // Hash the kid to ensure it fits in KV key length limit
+        const hashedKid = await hashKid(kid)
+        const cachedData = await cache.get(hashedKid)
+        if (cachedData) {
+          return JSON.parse(cachedData)
+        }
+        return null
+      },
+      put: async (kid: string, key: JsonWebKey) => {
+        const cache = c.env.PUBLIC_JWK_CACHE_KV
+        // Hash the kid to ensure it fits in KV key length limit
+        const hashedKid = await hashKid(kid)
+        await cache.put(hashedKid, JSON.stringify(key), {
+          expirationTtl: 3600, // 1 hour
+        })
+      },
     }
-		return new Response(null, { status: 404 });
   },
-} satisfies ExportedHandler<Env>;
+}
+
+// Health check (public route, no auth)
+app.get('/api/health', (c) => {
+  return c.json({ status: 'ok', timestamp: Date.now() })
+})
+
+// Firebase Auth middleware for protected routes
+app.use('/api/*', verifyFirebaseAuth(firebaseAuthConfig))
+
+// Middleware to ensure user exists in DB and email is verified
+app.use('/api/*', async (c, next) => {
+  const firebaseToken = getFirebaseToken(c)
+  
+  if (firebaseToken) {
+    // Check if email is verified
+    if (!firebaseToken.email_verified) {
+      return c.json({ error: 'Please verify your email before using the app' }, 403)
+    }
+    
+    const db = drizzle(c.env.DB)
+    
+    // Check if user exists
+    const existingUser = await db.select().from(users).where(eq(users.id, firebaseToken.uid)).get()
+    
+    // Create user if doesn't exist
+    if (!existingUser) {
+      await db.insert(users).values({
+        id: firebaseToken.uid,
+        email: firebaseToken.email || '',
+        defaultCurrency: 'USD',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+  }
+  
+  await next()
+})
+
+// Protected routes
+app.route('/api/user', userRoutes)
+app.route('/api/wallets', walletRoutes)
+app.route('/api/currency', currencyRoutes)
+app.route('/api/transactions', transactionRoutes)
+
+// Error handler
+app.onError((err, c) => {
+  console.error('Worker error:', err)
+  return c.json({ error: 'Internal server error' }, 500)
+})
+
+export default app

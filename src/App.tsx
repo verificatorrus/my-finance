@@ -1,86 +1,58 @@
 import { useState } from 'react'
-import {
-  Container,
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Stack,
-  Chip,
-} from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
-import CloudIcon from '@mui/icons-material/Cloud'
+import { AuthProvider } from './contexts/auth'
+import { useAuth } from './hooks/useAuth'
+import { Login } from './components/auth/Login'
+import { SignUp } from './components/auth/SignUp'
+import { ForgotPassword } from './components/auth/ForgotPassword'
+import { Dashboard } from './components/Dashboard'
+import { Box, CircularProgress } from '@mui/material'
+
+type AuthView = 'login' | 'signup' | 'forgot-password'
+
+function AuthFlow() {
+  const [view, setView] = useState<AuthView>('login')
+
+  switch (view) {
+    case 'signup':
+      return <SignUp onSwitchToLogin={() => setView('login')} />
+    case 'forgot-password':
+      return <ForgotPassword onSwitchToLogin={() => setView('login')} />
+    default:
+      return (
+        <Login
+          onSwitchToSignUp={() => setView('signup')}
+          onSwitchToForgotPassword={() => setView('forgot-password')}
+        />
+      )
+  }
+}
+
+function AppContent() {
+  const { currentUser, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  return currentUser ? <Dashboard /> : <AuthFlow />
+}
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [name, setName] = useState('unknown')
-
   return (
-    <Container maxWidth="md">
-      <Box sx={{ my: 4, textAlign: 'center' }}>
-        <Stack direction="row" spacing={2} justifyContent="center" mb={3}>
-          <Chip label="Vite" color="primary" variant="outlined" />
-          <Chip label="React 19" color="secondary" variant="outlined" />
-          <Chip label="Cloudflare" color="success" variant="outlined" />
-          <Chip label="MUI 7" color="info" variant="outlined" />
-        </Stack>
-
-        <Typography variant="h2" component="h1" gutterBottom>
-          My Finance
-        </Typography>
-
-        <Typography variant="h5" color="text.secondary" gutterBottom>
-          Modern Finance Management App
-        </Typography>
-
-        <Card sx={{ mt: 4, mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Counter Demo
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setCount((count) => count + 1)}
-              size="large"
-            >
-              Count is {count}
-            </Button>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Edit <code>src/App.tsx</code> and save to test HMR
-            </Typography>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Cloudflare Workers API
-            </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<CloudIcon />}
-              onClick={() => {
-                fetch('/api/')
-                  .then((res) => res.json() as Promise<{ name: string }>)
-                  .then((data) => setName(data.name))
-              }}
-              size="large"
-            >
-              Name from API: {name}
-            </Button>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Edit <code>worker/index.ts</code> to change the name
-            </Typography>
-          </CardContent>
-        </Card>
-
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 4 }}>
-          Built with Material UI v7
-        </Typography>
-      </Box>
-    </Container>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
