@@ -127,9 +127,10 @@ currencyRoutes.get('/rate/:from/:to', async (c) => {
       return c.json({ from, to, rate, cached: true })
     }
     
-    // If no rate found in DB, try external API as fallback
-    const externalRate = await fetchExchangeRate(from, to)
-    return c.json({ from, to, rate: externalRate, cached: false })
+    // No rate found in DB - currency rates are updated by cron job every 10 minutes
+    return c.json({ 
+      error: 'Currency rates not available yet. Please wait for the next update (runs every 10 minutes).' 
+    }, 503)
   } catch (error) {
     console.error('Error fetching currency rate:', error)
     return c.json({ error: 'Failed to fetch currency rate' }, 500)
@@ -162,17 +163,10 @@ currencyRoutes.get('/convert/:from/:to/:amount', async (c) => {
       })
     }
     
-    // If no rate found in DB, try external API as fallback
-    const externalRate = await fetchExchangeRate(from, to)
-    
-    return c.json({
-      from,
-      to,
-      amount,
-      converted: amount * externalRate,
-      rate: externalRate,
-      cached: false,
-    })
+    // No rate found in DB - currency rates are updated by cron job every 10 minutes
+    return c.json({ 
+      error: 'Currency rates not available yet. Please wait for the next update (runs every 10 minutes).' 
+    }, 503)
   } catch (error) {
     console.error('Error converting currency:', error)
     return c.json({ error: 'Failed to convert currency' }, 500)

@@ -67,6 +67,7 @@ export function CurrencyRates() {
   async function loadCurrentRate() {
     if (fromCurrency === toCurrency) {
       setCurrentRate(1)
+      setLastUpdate(new Date())
       return
     }
 
@@ -84,6 +85,7 @@ export function CurrencyRates() {
       if (response.ok) {
         const data = await response.json()
         setCurrentRate(data.rate)
+        setLastUpdate(new Date())
       }
     } catch (err: any) {
       console.error('Failed to load current rate:', err)

@@ -81,16 +81,30 @@ async function fetchUSDPrices(apiKey: string): Promise<{ [currency: string]: num
 function calculateBaseRates(usdPrices: { [currency: string]: number }): CurrencyRate[] {
   const rates: CurrencyRate[] = []
   
-  // Store only one direction: currency -> USD
-  // This means: how many USD you get for 1 unit of currency
-  for (const [currency, rate] of Object.entries(usdPrices)) {
-    if (currency !== 'USD') {
-      rates.push({ 
-        fromCurrency: currency, 
-        toCurrency: 'USD', 
-        rate: 1 / rate  // e.g., BTC->USD rate
-      })
-    }
+  // BTC: already in correct format (1 BTC = X USD)
+  if (usdPrices.BTC) {
+    rates.push({ 
+      fromCurrency: 'BTC', 
+      toCurrency: 'USD', 
+      rate: usdPrices.BTC
+    })
+  }
+  
+  // EUR and KZT: forex API returns 1 USD = X EUR/KZT, so we need to invert
+  if (usdPrices.EUR) {
+    rates.push({ 
+      fromCurrency: 'EUR', 
+      toCurrency: 'USD', 
+      rate: 1 / usdPrices.EUR  // Convert USD->EUR to EUR->USD
+    })
+  }
+  
+  if (usdPrices.KZT) {
+    rates.push({ 
+      fromCurrency: 'KZT', 
+      toCurrency: 'USD', 
+      rate: 1 / usdPrices.KZT  // Convert USD->KZT to KZT->USD
+    })
   }
   
   return rates
