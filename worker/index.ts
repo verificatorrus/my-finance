@@ -79,6 +79,18 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok', timestamp: Date.now() })
 })
 
+// Manual trigger for currency rates update (public route for testing)
+app.post('/api/update-rates', async (c) => {
+  try {
+    const { updateCurrencyRates } = await import('./cron/updateCurrencyRates')
+    await updateCurrencyRates(c.env.DB, c.env.COINMARKETCAP_API_KEY)
+    return c.json({ success: true, message: 'Currency rates updated successfully' })
+  } catch (error: any) {
+    console.error('Failed to update currency rates:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 // Firebase Auth middleware for protected routes
 app.use('/api/*', verifyFirebaseAuth(firebaseAuthConfig))
 

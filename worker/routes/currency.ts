@@ -9,45 +9,6 @@ type Bindings = {
 
 export const currencyRoutes = new Hono<{ Bindings: Bindings }>()
 
-// Fetch exchange rate from external API
-async function fetchExchangeRate(from: string, to: string): Promise<number> {
-  // For crypto currencies, use CoinGecko API
-  if (from === 'BTC') {
-    const currencyMap: Record<string, string> = {
-      'USD': 'usd',
-      'EUR': 'eur',
-      'KZT': 'kzt',
-    }
-    
-    const vsCurrency = currencyMap[to]
-    if (!vsCurrency) throw new Error('Unsupported currency pair')
-    
-    const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=${vsCurrency}`
-    )
-    
-    if (!response.ok) throw new Error('Failed to fetch crypto rate')
-    
-    const data: any = await response.json()
-    return data.bitcoin[vsCurrency]
-  }
-  
-  // For fiat currencies, use ExchangeRate-API
-  const response = await fetch(
-    `https://api.exchangerate-api.com/v4/latest/${from}`
-  )
-  
-  if (!response.ok) throw new Error('Failed to fetch exchange rate')
-  
-  const data: any = await response.json()
-  
-  if (!data.rates[to]) {
-    throw new Error('Currency not supported')
-  }
-  
-  return data.rates[to]
-}
-
 // Helper function to get rate from DB or calculate cross-rate
 async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string): Promise<number | null> {
   // If same currency, rate is 1
