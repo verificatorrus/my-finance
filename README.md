@@ -63,6 +63,9 @@ npm run db:migrate:archived:dev
 # Run currency rates index migration (development)
 npm run db:migrate:currency-index:dev
 
+# Clean up redundant currency rates (optimization)
+npm run db:migrate:cleanup-rates:dev
+
 # For production, use :prod suffix instead of :dev
 ```
 

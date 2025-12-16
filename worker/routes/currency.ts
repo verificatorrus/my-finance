@@ -48,20 +48,15 @@ async function fetchExchangeRate(from: string, to: string): Promise<number> {
   return data.rates[to]
 }
 
-// Get exchange rate between two currencies
-currencyRoutes.get('/rate/:from/:to', async (c) => {
-  const from = c.req.param('from').toUpperCase()
-  const to = c.req.param('to').toUpperCase()
-  
+// Helper function to get rate from DB or calculate cross-rate
+async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string): Promise<number | null> {
   // If same currency, rate is 1
   if (from === to) {
-    return c.json({ from, to, rate: 1 })
+    return 1
   }
   
-  const db = drizzle(c.env.DB)
-  
-  // Check if we have a cached rate (less than 1 hour old)
-  const cachedRate = await db
+  // Try to get direct rate from DB
+  const directRate = await db
     .select()
     .from(currencyRates)
     .where(and(
@@ -70,43 +65,56 @@ currencyRoutes.get('/rate/:from/:to', async (c) => {
     ))
     .get()
   
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-  
-  if (cachedRate && cachedRate.updatedAt > oneHourAgo) {
-    return c.json({ from, to, rate: cachedRate.rate, cached: true })
+  if (directRate) {
+    return directRate.rate
   }
   
-  // Fetch fresh rate from external API
+  // If no direct rate, calculate cross-rate through USD
+  // For example: EUR -> KZT = (EUR -> USD) * (USD -> KZT)
+  const fromToUSD = await db
+    .select()
+    .from(currencyRates)
+    .where(and(
+      eq(currencyRates.fromCurrency, from),
+      eq(currencyRates.toCurrency, 'USD')
+    ))
+    .get()
+  
+  const usdToTarget = await db
+    .select()
+    .from(currencyRates)
+    .where(and(
+      eq(currencyRates.fromCurrency, 'USD'),
+      eq(currencyRates.toCurrency, to)
+    ))
+    .get()
+  
+  if (fromToUSD && usdToTarget) {
+    return fromToUSD.rate * usdToTarget.rate
+  }
+  
+  return null
+}
+
+// Get exchange rate between two currencies
+currencyRoutes.get('/rate/:from/:to', async (c) => {
+  const from = c.req.param('from').toUpperCase()
+  const to = c.req.param('to').toUpperCase()
+  
+  const db = drizzle(c.env.DB)
+  
   try {
-    const rate = await fetchExchangeRate(from, to)
+    const rate = await getRate(db, from, to)
     
-    // Update or insert the rate in cache
-    if (cachedRate) {
-      await db
-        .update(currencyRates)
-        .set({ rate, updatedAt: new Date() })
-        .where(and(
-          eq(currencyRates.fromCurrency, from),
-          eq(currencyRates.toCurrency, to)
-        ))
-    } else {
-      await db.insert(currencyRates).values({
-        fromCurrency: from,
-        toCurrency: to,
-        rate,
-        updatedAt: new Date(),
-      })
+    if (rate !== null) {
+      return c.json({ from, to, rate, cached: true })
     }
     
-    return c.json({ from, to, rate, cached: false })
+    // If no rate found in DB, try external API as fallback
+    const externalRate = await fetchExchangeRate(from, to)
+    return c.json({ from, to, rate: externalRate, cached: false })
   } catch (error) {
     console.error('Error fetching currency rate:', error)
-    
-    // If we have a cached rate (even if old), return it
-    if (cachedRate) {
-      return c.json({ from, to, rate: cachedRate.rate, cached: true, stale: true })
-    }
-    
     return c.json({ error: 'Failed to fetch currency rate' }, 500)
   }
 })
@@ -121,80 +129,35 @@ currencyRoutes.get('/convert/:from/:to/:amount', async (c) => {
     return c.json({ error: 'Invalid amount' }, 400)
   }
   
-  if (from === to) {
-    return c.json({ from, to, amount, converted: amount, rate: 1 })
-  }
-  
   const db = drizzle(c.env.DB)
   
-  // Check cache first
-  const cachedRate = await db
-    .select()
-    .from(currencyRates)
-    .where(and(
-      eq(currencyRates.fromCurrency, from),
-      eq(currencyRates.toCurrency, to)
-    ))
-    .get()
-  
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-  
-  if (cachedRate && cachedRate.updatedAt > oneHourAgo) {
-    return c.json({
-      from,
-      to,
-      amount,
-      converted: amount * cachedRate.rate,
-      rate: cachedRate.rate,
-      cached: true,
-    })
-  }
-  
-  // Fetch fresh rate
   try {
-    const rate = await fetchExchangeRate(from, to)
+    const rate = await getRate(db, from, to)
     
-    // Update cache
-    if (cachedRate) {
-      await db
-        .update(currencyRates)
-        .set({ rate, updatedAt: new Date() })
-        .where(and(
-          eq(currencyRates.fromCurrency, from),
-          eq(currencyRates.toCurrency, to)
-        ))
-    } else {
-      await db.insert(currencyRates).values({
-        fromCurrency: from,
-        toCurrency: to,
-        rate,
-        updatedAt: new Date(),
-      })
-    }
-    
-    return c.json({
-      from,
-      to,
-      amount,
-      converted: amount * rate,
-      rate,
-      cached: false,
-    })
-  } catch (error) {
-    console.error('Error converting currency:', error)
-    
-    if (cachedRate) {
+    if (rate !== null) {
       return c.json({
         from,
         to,
         amount,
-        converted: amount * cachedRate.rate,
-        rate: cachedRate.rate,
+        converted: amount * rate,
+        rate,
         cached: true,
-        stale: true,
       })
     }
     
+    // If no rate found in DB, try external API as fallback
+    const externalRate = await fetchExchangeRate(from, to)
+    
+    return c.json({
+      from,
+      to,
+      amount,
+      converted: amount * externalRate,
+      rate: externalRate,
+      cached: false,
+    })
+  } catch (error) {
+    console.error('Error converting currency:', error)
     return c.json({ error: 'Failed to convert currency' }, 500)
   }
 })

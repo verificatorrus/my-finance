@@ -30,66 +30,63 @@ interface CurrencyRate {
 }
 
 /**
- * Fetch BTC price in specified currency from CoinMarketCap API
+ * Fetch all currency prices in USD from CoinMarketCap API
+ * We only need one API call to get BTC, EUR, and KZT prices in USD
  */
-async function fetchBTCPrice(currency: string, apiKey: string): Promise<number> {
-  const url = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=BTC&convert=${currency}&CMC_PRO_API_KEY=${apiKey}`
+async function fetchUSDPrices(apiKey: string): Promise<{ [currency: string]: number }> {
+  // Get BTC price in USD
+  const btcUrl = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=BTC&convert=USD&CMC_PRO_API_KEY=${apiKey}`
   
-  const response = await fetch(url, {
+  const btcResponse = await fetch(btcUrl, {
     headers: {
       'Accept': 'application/json',
     },
   })
   
-  if (!response.ok) {
-    throw new Error(`Failed to fetch BTC price for ${currency}: ${response.status}`)
+  if (!btcResponse.ok) {
+    throw new Error(`Failed to fetch BTC price: ${btcResponse.status}`)
   }
   
-  const data: CoinMarketCapResponse = await response.json()
+  const btcData: CoinMarketCapResponse = await btcResponse.json()
   
-  if (data.status.error_code !== 0) {
-    throw new Error(`CoinMarketCap API error: ${data.status.error_message}`)
+  if (btcData.status.error_code !== 0) {
+    throw new Error(`CoinMarketCap API error: ${btcData.status.error_message}`)
   }
   
-  return data.data.BTC.quote[currency].price
+  const btcInUSD = btcData.data.BTC.quote.USD.price
+  
+  // For fiat currencies, we can use a free forex API or calculate from BTC
+  // For now, let's use exchange rate API for EUR and KZT
+  const eurResponse = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
+  
+  if (!eurResponse.ok) {
+    throw new Error(`Failed to fetch EUR/KZT rates: ${eurResponse.status}`)
+  }
+  
+  const forexData = await eurResponse.json() as { rates: { EUR: number; KZT: number } }
+  
+  return {
+    USD: 1, // USD to USD is always 1
+    BTC: btcInUSD, // Price of BTC in USD
+    EUR: forexData.rates.EUR, // USD to EUR rate
+    KZT: forexData.rates.KZT, // USD to KZT rate
+  }
 }
 
 /**
- * Calculate all currency exchange rates based on BTC prices
- * We get BTC prices in KZT, EUR, and USD, then calculate cross-rates
+ * Calculate base rates to store in DB
+ * We only store rates to USD (base currency)
  */
-function calculateCrossRates(btcPrices: { [currency: string]: number }): CurrencyRate[] {
-  const currencies = ['BTC', 'USD', 'EUR', 'KZT']
+function calculateBaseRates(usdPrices: { [currency: string]: number }): CurrencyRate[] {
   const rates: CurrencyRate[] = []
   
-  // Add BTC to fiat rates (BTC -> USD, BTC -> EUR, BTC -> KZT)
-  rates.push({ fromCurrency: 'BTC', toCurrency: 'USD', rate: btcPrices.USD })
-  rates.push({ fromCurrency: 'BTC', toCurrency: 'EUR', rate: btcPrices.EUR })
-  rates.push({ fromCurrency: 'BTC', toCurrency: 'KZT', rate: btcPrices.KZT })
-  
-  // Calculate fiat to BTC rates (USD -> BTC, EUR -> BTC, KZT -> BTC)
-  rates.push({ fromCurrency: 'USD', toCurrency: 'BTC', rate: 1 / btcPrices.USD })
-  rates.push({ fromCurrency: 'EUR', toCurrency: 'BTC', rate: 1 / btcPrices.EUR })
-  rates.push({ fromCurrency: 'KZT', toCurrency: 'BTC', rate: 1 / btcPrices.KZT })
-  
-  // Calculate fiat cross-rates using BTC as intermediary
-  // For example: USD -> EUR = (USD -> BTC) * (BTC -> EUR)
-  
-  // USD to other fiats
-  rates.push({ fromCurrency: 'USD', toCurrency: 'EUR', rate: btcPrices.EUR / btcPrices.USD })
-  rates.push({ fromCurrency: 'USD', toCurrency: 'KZT', rate: btcPrices.KZT / btcPrices.USD })
-  
-  // EUR to other fiats
-  rates.push({ fromCurrency: 'EUR', toCurrency: 'USD', rate: btcPrices.USD / btcPrices.EUR })
-  rates.push({ fromCurrency: 'EUR', toCurrency: 'KZT', rate: btcPrices.KZT / btcPrices.EUR })
-  
-  // KZT to other fiats
-  rates.push({ fromCurrency: 'KZT', toCurrency: 'USD', rate: btcPrices.USD / btcPrices.KZT })
-  rates.push({ fromCurrency: 'KZT', toCurrency: 'EUR', rate: btcPrices.EUR / btcPrices.KZT })
-  
-  // Add same currency rates (1:1)
-  for (const currency of currencies) {
-    rates.push({ fromCurrency: currency, toCurrency: currency, rate: 1 })
+  // Store all currency prices in USD
+  for (const [currency, rate] of Object.entries(usdPrices)) {
+    if (currency !== 'USD') {
+      // Store both directions for easier querying
+      rates.push({ fromCurrency: currency, toCurrency: 'USD', rate: 1 / rate })
+      rates.push({ fromCurrency: 'USD', toCurrency: currency, rate })
+    }
   }
   
   return rates
@@ -133,30 +130,21 @@ async function upsertCurrencyRate(
 
 /**
  * Main function to update all currency rates
+ * Now we only store base rates (all currencies to/from USD)
  */
 export async function updateCurrencyRates(db: D1Database, apiKey: string): Promise<void> {
   console.log('Starting currency rates update...')
   
   try {
-    // Fetch BTC prices in all target currencies
-    const [btcInUSD, btcInEUR, btcInKZT] = await Promise.all([
-      fetchBTCPrice('USD', apiKey),
-      fetchBTCPrice('EUR', apiKey),
-      fetchBTCPrice('KZT', apiKey),
-    ])
+    // Fetch all currency prices in USD
+    const usdPrices = await fetchUSDPrices(apiKey)
     
-    console.log(`Fetched BTC prices: USD=${btcInUSD}, EUR=${btcInEUR}, KZT=${btcInKZT}`)
+    console.log(`Fetched USD prices:`, usdPrices)
     
-    // Calculate all cross-rates
-    const btcPrices = {
-      USD: btcInUSD,
-      EUR: btcInEUR,
-      KZT: btcInKZT,
-    }
+    // Calculate base rates (only to/from USD)
+    const rates = calculateBaseRates(usdPrices)
     
-    const rates = calculateCrossRates(btcPrices)
-    
-    console.log(`Calculated ${rates.length} exchange rates`)
+    console.log(`Calculated ${rates.length} base exchange rates`)
     
     // Save all rates to database
     const drizzleDb = drizzle(db)

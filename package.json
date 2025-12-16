@@ -19,6 +19,8 @@
 		"db:migrate:archived:prod": "wrangler d1 execute my-finace-prod --remote --file=./db/migrations/0002_add_wallet_archived.sql",
 		"db:migrate:currency-index:dev": "wrangler d1 execute my-finance-dev --remote --file=./db/migrations/0003_add_currency_rates_index.sql --env=dev",
 		"db:migrate:currency-index:prod": "wrangler d1 execute my-finace-prod --remote --file=./db/migrations/0003_add_currency_rates_index.sql",
+		"db:migrate:cleanup-rates:dev": "wrangler d1 execute my-finance-dev --remote --file=./db/migrations/0004_cleanup_currency_rates.sql --env=dev",
+		"db:migrate:cleanup-rates:prod": "wrangler d1 execute my-finace-prod --remote --file=./db/migrations/0004_cleanup_currency_rates.sql",
 		"test:cron": "curl 'http://localhost:5173/__scheduled?cron=*/10+*+*+*+*'",
 		"android:sync": "npm run build && npx cap sync android",
 		"android:open": "npx cap open android",
@@ -41,13 +43,15 @@
 		"hono": "^4.10.8",
 		"nanoid": "^5.1.6",
 		"react": "^19.1.1",
-		"react-dom": "^19.1.1"
+		"react-dom": "^19.1.1",
+		"recharts": "^3.6.0"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.17.1",
 		"@eslint/js": "^9.33.0",
 		"@types/react": "^19.1.10",
 		"@types/react-dom": "^19.1.7",
+		"@types/recharts": "^1.8.29",
 		"@vitejs/plugin-react": "^5.0.0",
 		"cross-env": "^10.1.0",
 		"eslint": "^9.33.0",
