@@ -21,6 +21,8 @@
 		"db:migrate:currency-index:prod": "wrangler d1 execute my-finace-prod --remote --file=./db/migrations/0003_add_currency_rates_index.sql",
 		"db:migrate:cleanup-rates:dev": "wrangler d1 execute my-finance-dev --remote --file=./db/migrations/0004_cleanup_currency_rates.sql --env=dev",
 		"db:migrate:cleanup-rates:prod": "wrangler d1 execute my-finace-prod --remote --file=./db/migrations/0004_cleanup_currency_rates.sql",
+		"db:migrate:optimize-rates:dev": "wrangler d1 execute my-finance-dev --remote --file=./db/migrations/0005_optimize_currency_rates.sql --env=dev",
+		"db:migrate:optimize-rates:prod": "wrangler d1 execute my-finace-prod --remote --file=./db/migrations/0005_optimize_currency_rates.sql",
 		"test:cron": "curl 'http://localhost:5173/__scheduled?cron=*/10+*+*+*+*'",
 		"android:sync": "npm run build && npx cap sync android",
 		"android:open": "npx cap open android",

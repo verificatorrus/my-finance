@@ -75,17 +75,21 @@ async function fetchUSDPrices(apiKey: string): Promise<{ [currency: string]: num
 
 /**
  * Calculate base rates to store in DB
- * We only store rates to USD (base currency)
+ * We only store rates FROM other currencies TO USD (3 records total)
+ * Reverse rates (USD to other currencies) are calculated as 1/rate on the fly
  */
 function calculateBaseRates(usdPrices: { [currency: string]: number }): CurrencyRate[] {
   const rates: CurrencyRate[] = []
   
-  // Store all currency prices in USD
+  // Store only one direction: currency -> USD
+  // This means: how many USD you get for 1 unit of currency
   for (const [currency, rate] of Object.entries(usdPrices)) {
     if (currency !== 'USD') {
-      // Store both directions for easier querying
-      rates.push({ fromCurrency: currency, toCurrency: 'USD', rate: 1 / rate })
-      rates.push({ fromCurrency: 'USD', toCurrency: currency, rate })
+      rates.push({ 
+        fromCurrency: currency, 
+        toCurrency: 'USD', 
+        rate: 1 / rate  // e.g., BTC->USD rate
+      })
     }
   }
   

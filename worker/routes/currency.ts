@@ -55,42 +55,59 @@ async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string)
     return 1
   }
   
-  // Try to get direct rate from DB
-  const directRate = await db
-    .select()
-    .from(currencyRates)
-    .where(and(
-      eq(currencyRates.fromCurrency, from),
-      eq(currencyRates.toCurrency, to)
-    ))
-    .get()
-  
-  if (directRate) {
-    return directRate.rate
-  }
-  
-  // If no direct rate, calculate cross-rate through USD
-  // For example: EUR -> KZT = (EUR -> USD) * (USD -> KZT)
-  const fromToUSD = await db
-    .select()
-    .from(currencyRates)
-    .where(and(
-      eq(currencyRates.fromCurrency, from),
-      eq(currencyRates.toCurrency, 'USD')
-    ))
-    .get()
-  
-  const usdToTarget = await db
-    .select()
-    .from(currencyRates)
-    .where(and(
-      eq(currencyRates.fromCurrency, 'USD'),
-      eq(currencyRates.toCurrency, to)
-    ))
-    .get()
-  
-  if (fromToUSD && usdToTarget) {
-    return fromToUSD.rate * usdToTarget.rate
+  // Special case: if from or to is USD, we only need one DB query
+  if (from === 'USD') {
+    // USD -> X: need to find X -> USD rate and invert it
+    const xToUSD = await db
+      .select()
+      .from(currencyRates)
+      .where(and(
+        eq(currencyRates.fromCurrency, to),
+        eq(currencyRates.toCurrency, 'USD')
+      ))
+      .get()
+    
+    if (xToUSD) {
+      return 1 / xToUSD.rate
+    }
+  } else if (to === 'USD') {
+    // X -> USD: direct query
+    const fromToUSD = await db
+      .select()
+      .from(currencyRates)
+      .where(and(
+        eq(currencyRates.fromCurrency, from),
+        eq(currencyRates.toCurrency, 'USD')
+      ))
+      .get()
+    
+    if (fromToUSD) {
+      return fromToUSD.rate
+    }
+  } else {
+    // Cross-rate: X -> Y = (X -> USD) / (Y -> USD)
+    // Example: EUR -> KZT = (EUR -> USD) / (KZT -> USD)
+    const fromToUSD = await db
+      .select()
+      .from(currencyRates)
+      .where(and(
+        eq(currencyRates.fromCurrency, from),
+        eq(currencyRates.toCurrency, 'USD')
+      ))
+      .get()
+    
+    const toToUSD = await db
+      .select()
+      .from(currencyRates)
+      .where(and(
+        eq(currencyRates.fromCurrency, to),
+        eq(currencyRates.toCurrency, 'USD')
+      ))
+      .get()
+    
+    if (fromToUSD && toToUSD) {
+      return fromToUSD.rate / toToUSD.rate
+    }
   }
   
   return null
