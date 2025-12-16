@@ -14,7 +14,13 @@
 		"enabled": true
 	},
 	"vars": {
-		"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache"
+		"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache",
+		"COINMARKETCAP_API_KEY": "5a4ff464-7772-4c36-8e90-4e223e513874"
+	},
+	"triggers": {
+		"crons": [
+			"*/10 * * * *"
+		]
 	},
 	/**
 	 * D1 Database
@@ -42,7 +48,13 @@
 	"env": {
 		"dev": {
 			"vars": {
-				"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache"
+				"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache",
+				"COINMARKETCAP_API_KEY": "5a4ff464-7772-4c36-8e90-4e223e513874"
+			},
+			"triggers": {
+				"crons": [
+					"*/10 * * * *"
+				]
 			},
 			"d1_databases": [
 				{

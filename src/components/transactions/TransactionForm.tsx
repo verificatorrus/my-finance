@@ -10,7 +10,6 @@ import {
   Alert,
   Tabs,
   Tab,
-  Box,
 } from '@mui/material'
 import { walletApi, transactionApi } from '../../lib/api'
 import type { Wallet } from '../../lib/api'

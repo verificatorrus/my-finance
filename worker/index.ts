@@ -1,9 +1,8 @@
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import { 
   verifyFirebaseAuth, 
-  VerifyFirebaseAuthConfig,
-  VerifyFirebaseAuthEnv,
+  type VerifyFirebaseAuthConfig,
+  type VerifyFirebaseAuthEnv,
   getFirebaseToken
 } from '@hono/firebase-auth'
 import { drizzle } from 'drizzle-orm/d1'
@@ -13,9 +12,11 @@ import { userRoutes } from './routes/user'
 import { walletRoutes } from './routes/wallet'
 import { currencyRoutes } from './routes/currency'
 import { transactionRoutes } from './routes/transaction'
+import { updateCurrencyRates } from './cron/updateCurrencyRates'
 
 type Bindings = VerifyFirebaseAuthEnv & {
   DB: D1Database
+  COINMARKETCAP_API_KEY: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -29,7 +30,7 @@ app.use('/api/*', async (c, next) => {
   c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   
   if (c.req.method === 'OPTIONS') {
-    return c.text('', 204)
+    return new Response(null, { status: 204 })
   }
   
   await next()
@@ -48,6 +49,7 @@ async function hashKid(kid: string): Promise<string> {
 const firebaseAuthConfig: VerifyFirebaseAuthConfig = {
   projectId: 'my-finace-dev',
   authorizationHeaderKey: 'Authorization',
+  // @ts-expect-error - KeyStorer type mismatch with actual implementation
   keyStoreInitializer: (c) => {
     return {
       get: async (kid: string) => {
@@ -122,4 +124,22 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal server error' }, 500)
 })
 
-export default app
+// Scheduled event handler for cron triggers
+export default {
+  fetch: app.fetch,
+  async scheduled(
+    controller: ScheduledController,
+    env: Bindings
+  ): Promise<void> {
+    console.log('Cron trigger fired:', controller.scheduledTime)
+    
+    try {
+      // Wait for the currency rates update to complete
+      await updateCurrencyRates(env.DB, env.COINMARKETCAP_API_KEY)
+      console.log('Currency rates updated successfully via cron')
+    } catch (error) {
+      console.error('Failed to update currency rates via cron:', error)
+      // Don't throw - we want the cron job to continue running
+    }
+  }
+}

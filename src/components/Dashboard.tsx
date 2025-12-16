@@ -71,14 +71,14 @@ export function Dashboard() {
         <EmailVerificationBanner />
         
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <WalletList
               key={refreshKey}
               onAddWallet={handleAddWallet}
               onEditWallet={handleEditWallet}
             />
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <TransactionList refreshKey={refreshKey} />
           </Grid>
         </Grid>

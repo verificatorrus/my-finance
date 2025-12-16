@@ -48,6 +48,31 @@ npm run preview
 npm run lint
 ```
 
+### Database Migrations
+
+```bash
+# Run initial migration (development)
+npm run db:migrate:dev
+
+# Run transactions migration (development)
+npm run db:migrate:transactions:dev
+
+# Run wallet archived migration (development)
+npm run db:migrate:archived:dev
+
+# Run currency rates index migration (development)
+npm run db:migrate:currency-index:dev
+
+# For production, use :prod suffix instead of :dev
+```
+
+### Cron Jobs Testing
+
+```bash
+# Test currency rates update cron job (requires dev server running)
+npm run test:cron
+```
+
 ### Mobile Development (Android)
 
 ```bash
@@ -107,6 +132,26 @@ The project is configured with the following Cloudflare bindings:
 
 - **KV Namespace**: `PUBLIC_JWK_CACHE_KV`
   - Used for caching Firebase Authentication public keys
+
+### Cron Triggers
+
+The project uses Cloudflare Workers Cron Triggers to automatically update currency exchange rates:
+
+- **Schedule**: Every 10 minutes (`*/10 * * * *`)
+- **API**: CoinMarketCap API
+- **Currencies**: BTC, USD, EUR, KZT
+- **Storage**: Rates are stored in `currency_rates` table for historical tracking
+
+To test the cron trigger locally:
+```bash
+# Start dev server first
+npm run dev
+
+# In another terminal, trigger the cron job
+npm run test:cron
+# or manually:
+curl "http://localhost:5173/__scheduled?cron=*/10+*+*+*+*"
+```
 
 ### Capacitor Configuration
 

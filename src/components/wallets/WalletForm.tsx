@@ -69,7 +69,11 @@ export function WalletForm({ open, onClose, onSuccess, wallet }: WalletFormProps
 
       if (wallet) {
         // Update existing wallet (no balance field)
-        await walletApi.update(token, wallet.id, { name, type, currency })
+        await walletApi.update(token, wallet.id, { 
+          name, 
+          type: type as 'wallet' | 'savings' | 'bank_account' | 'crypto_wallet', 
+          currency: currency as 'KZT' | 'USD' | 'EUR' | 'BTC'
+        })
       } else {
         // Create new wallet
         const newWallet = await walletApi.create(token, {
