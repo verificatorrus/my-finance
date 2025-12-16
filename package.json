@@ -25,7 +25,7 @@
 		"db:migrate:optimize-rates:prod": "wrangler d1 execute my-finace-prod --remote --file=./db/migrations/0005_optimize_currency_rates.sql",
 		"db:migrate:fix-rates:dev": "wrangler d1 execute my-finance-dev --remote --file=./db/migrations/0006_fix_currency_rates.sql --env=dev",
 		"db:migrate:fix-rates:prod": "wrangler d1 execute my-finace-prod --remote --file=./db/migrations/0006_fix_currency_rates.sql",
-		"test:cron": "curl 'http://localhost:5173/__scheduled?cron=*/10+*+*+*+*'",
+		"test:cron": "curl -X POST 'http://localhost:5173/api/update-rates'",
 		"android:sync": "npm run build && npx cap sync android",
 		"android:open": "npx cap open android",
 		"android:build": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug",
