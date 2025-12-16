@@ -51,11 +51,9 @@ export function CurrencyRates() {
 
   useEffect(() => {
     loadRates()
-    loadCurrentRate()
-    // Update rates every minute
+    // Update all rates every minute
     const interval = setInterval(() => {
       loadRates()
-      loadCurrentRate()
     }, 60000)
     return () => clearInterval(interval)
   }, [])
@@ -63,6 +61,14 @@ export function CurrencyRates() {
   useEffect(() => {
     loadCurrentRate()
   }, [fromCurrency, toCurrency])
+
+  // Separate effect to update current rate every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadCurrentRate()
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [fromCurrency, toCurrency]) // Now depends on currency selection
 
   async function loadCurrentRate() {
     if (fromCurrency === toCurrency) {
@@ -120,7 +126,7 @@ export function CurrencyRates() {
       }
 
       setRates(ratesData)
-      setLastUpdate(new Date())
+      // Don't update lastUpdate here to avoid race condition with loadCurrentRate()
     } catch (err: any) {
       setError(err.message || 'Failed to load currency rates')
     } finally {
@@ -294,7 +300,7 @@ export function CurrencyRates() {
 
       {/* Info Box */}
       <Alert severity="info" sx={{ mt: 4 }}>
-        Currency rates are automatically updated every 10 minutes using CoinMarketCap API. 
+        Currency rates are automatically updated every hour using CoinMarketCap API. 
         BTC is used as an intermediary to calculate cross-rates between fiat currencies.
       </Alert>
     </Container>
