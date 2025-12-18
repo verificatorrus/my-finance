@@ -11,6 +11,7 @@ import { users } from '../db/schema'
 import { userRoutes } from './routes/user'
 import { walletRoutes } from './routes/wallet'
 import { currencyRoutes } from './routes/currency'
+import { currencyHistoryRoutes } from './routes/currencyHistory'
 import { transactionRoutes } from './routes/transaction'
 import { debugRoutes } from './routes/debug'
 import { updateCurrencyRates } from './cron/updateCurrencyRates'
@@ -129,6 +130,7 @@ app.use('/api/*', async (c, next) => {
 app.route('/api/user', userRoutes)
 app.route('/api/wallets', walletRoutes)
 app.route('/api/currency', currencyRoutes)
+app.route('/api/currency', currencyHistoryRoutes)
 app.route('/api/transactions', transactionRoutes)
 
 // Debug routes (public for testing)

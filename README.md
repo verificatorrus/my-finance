@@ -155,8 +155,13 @@ npm run dev
 curl -X POST "http://localhost:5173/api/update-rates"
 ```
 
-**Database Growth**: With updates every 10 minutes, you'll have ~432 records/day (3 currency pairs × 144 updates). 
-For slower growth, use hourly updates (`0 * * * *`) for ~72 records/day.
+**Database Growth**: With updates every 10 minutes, you'll have ~432 records/day (3 currency pairs × 144 updates).
+
+**API Endpoints**: 
+- `GET /api/currency/rate/:from/:to` - Get current exchange rate
+- `GET /api/currency/history/:from/:to?period=7d` - Get historical rates (1h, 24h, 7d, 30d, 1y, all)
+- `GET /api/currency/convert/:from/:to/:amount` - Convert amount between currencies
+- `POST /api/update-rates` - Manually trigger rates update
 
 **Debug Endpoints**: 
 - `GET /api/debug/recent-rates` - View last 20 rate records
