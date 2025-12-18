@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { drizzle } from 'drizzle-orm/d1'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 import { currencyRates } from '../../db/schema'
 
 type Bindings = {
@@ -9,7 +9,7 @@ type Bindings = {
 
 export const currencyRoutes = new Hono<{ Bindings: Bindings }>()
 
-// Helper function to get rate from DB or calculate cross-rate
+// Helper function to get latest rate from DB or calculate cross-rate
 async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string): Promise<number | null> {
   // If same currency, rate is 1
   if (from === to) {
@@ -18,7 +18,7 @@ async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string)
   
   // Special case: if from or to is USD, we only need one DB query
   if (from === 'USD') {
-    // USD -> X: need to find X -> USD rate and invert it
+    // USD -> X: need to find latest X -> USD rate and invert it
     const xToUSD = await db
       .select()
       .from(currencyRates)
@@ -26,13 +26,15 @@ async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string)
         eq(currencyRates.fromCurrency, to),
         eq(currencyRates.toCurrency, 'USD')
       ))
+      .orderBy(desc(currencyRates.updatedAt))
+      .limit(1)
       .get()
     
     if (xToUSD) {
       return 1 / xToUSD.rate
     }
   } else if (to === 'USD') {
-    // X -> USD: direct query
+    // X -> USD: direct query for latest rate
     const fromToUSD = await db
       .select()
       .from(currencyRates)
@@ -40,6 +42,8 @@ async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string)
         eq(currencyRates.fromCurrency, from),
         eq(currencyRates.toCurrency, 'USD')
       ))
+      .orderBy(desc(currencyRates.updatedAt))
+      .limit(1)
       .get()
     
     if (fromToUSD) {
@@ -55,6 +59,8 @@ async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string)
         eq(currencyRates.fromCurrency, from),
         eq(currencyRates.toCurrency, 'USD')
       ))
+      .orderBy(desc(currencyRates.updatedAt))
+      .limit(1)
       .get()
     
     const toToUSD = await db
@@ -64,6 +70,8 @@ async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string)
         eq(currencyRates.fromCurrency, to),
         eq(currencyRates.toCurrency, 'USD')
       ))
+      .orderBy(desc(currencyRates.updatedAt))
+      .limit(1)
       .get()
     
     if (fromToUSD && toToUSD) {

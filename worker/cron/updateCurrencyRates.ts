@@ -1,5 +1,4 @@
 import { drizzle } from 'drizzle-orm/d1'
-import { eq, and } from 'drizzle-orm'
 import { currencyRates } from '../../db/schema'
 
 interface CoinMarketCapResponse {
@@ -111,39 +110,22 @@ function calculateBaseRates(usdPrices: { [currency: string]: number }): Currency
 }
 
 /**
- * Update or insert currency rates in the database
+ * Insert currency rate into the database for historical tracking
+ * Each insert creates a new record to maintain history
  */
-async function upsertCurrencyRate(
+async function insertCurrencyRate(
   db: ReturnType<typeof drizzle>,
   fromCurrency: string,
   toCurrency: string,
   rate: number
 ) {
-  const existing = await db
-    .select()
-    .from(currencyRates)
-    .where(and(
-      eq(currencyRates.fromCurrency, fromCurrency),
-      eq(currencyRates.toCurrency, toCurrency)
-    ))
-    .get()
-  
-  if (existing) {
-    await db
-      .update(currencyRates)
-      .set({ rate, updatedAt: new Date() })
-      .where(and(
-        eq(currencyRates.fromCurrency, fromCurrency),
-        eq(currencyRates.toCurrency, toCurrency)
-      ))
-  } else {
-    await db.insert(currencyRates).values({
-      fromCurrency,
-      toCurrency,
-      rate,
-      updatedAt: new Date(),
-    })
-  }
+  // Always INSERT new record to keep history
+  await db.insert(currencyRates).values({
+    fromCurrency,
+    toCurrency,
+    rate,
+    updatedAt: new Date(),
+  })
 }
 
 /**
@@ -164,11 +146,11 @@ export async function updateCurrencyRates(db: D1Database, apiKey: string): Promi
     
     console.log(`Calculated ${rates.length} base exchange rates`)
     
-    // Save all rates to database
+    // Save all rates to database (keeping history)
     const drizzleDb = drizzle(db)
     
     for (const rate of rates) {
-      await upsertCurrencyRate(
+      await insertCurrencyRate(
         drizzleDb,
         rate.fromCurrency,
         rate.toCurrency,

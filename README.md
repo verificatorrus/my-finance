@@ -140,10 +140,11 @@ The project is configured with the following Cloudflare bindings:
 
 The project uses Cloudflare Workers Cron Triggers to automatically update currency exchange rates:
 
-- **Schedule**: Every hour (`0 * * * *`)
-- **API**: CoinMarketCap API
+- **Schedule**: Every minute (`* * * * *`) for testing (change to hourly `0 * * * *` for production)
+- **API**: CoinMarketCap API + ExchangeRate-API
 - **Currencies**: BTC, USD, EUR, KZT
-- **Storage**: Rates are stored in `currency_rates` table for historical tracking
+- **Storage**: All rates are stored in `currency_rates` table with full history
+- **History**: Every update creates a new record, allowing historical tracking and analysis
 
 To test the cron trigger locally:
 ```bash
@@ -153,6 +154,9 @@ npm run dev
 # In another terminal, trigger the cron job manually
 curl -X POST "http://localhost:5173/api/update-rates"
 ```
+
+**Database Growth**: With updates every minute, you'll have ~1,440 records/day (3 currency pairs × 480 updates). 
+For production, use hourly updates (`0 * * * *`) for ~72 records/day.
 
 ### Capacitor Configuration
 
