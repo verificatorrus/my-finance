@@ -58,27 +58,16 @@ export function CurrencyRates() {
 
   useEffect(() => {
     loadRates()
-    loadHistory()
     // Update all rates every minute
     const interval = setInterval(() => {
       loadRates()
-      loadHistory()
     }, 60000)
     return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
-    loadCurrentRate()
     loadHistory()
   }, [fromCurrency, toCurrency, period])
-
-  // Separate effect to update current rate every minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadCurrentRate()
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [fromCurrency, toCurrency])
 
   async function loadHistory() {
     try {
@@ -108,33 +97,6 @@ export function CurrencyRates() {
     }
   }
 
-  async function loadCurrentRate() {
-    if (fromCurrency === toCurrency) {
-      setCurrentRate(1)
-      setLastUpdate(new Date())
-      return
-    }
-
-    try {
-      const token = await getIdToken()
-      if (!token) return
-
-      const response = await fetch(
-        `/api/currency/rate/${fromCurrency}/${toCurrency}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      )
-
-      if (response.ok) {
-        const data = await response.json()
-        setCurrentRate(data.rate)
-        setLastUpdate(new Date())
-      }
-    } catch (err: any) {
-      console.error('Failed to load current rate:', err)
-    }
-  }
 
   async function loadRates() {
     try {
