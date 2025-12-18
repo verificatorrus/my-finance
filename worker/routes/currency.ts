@@ -96,9 +96,9 @@ currencyRoutes.get('/rate/:from/:to', async (c) => {
       return c.json({ from, to, rate, cached: true })
     }
     
-    // No rate found in DB - currency rates are updated by cron job every hour
+    // No rate found in DB - currency rates are updated by cron job every 10 minutes
     return c.json({ 
-      error: 'Currency rates not available yet. Please wait for the next update (runs every hour).' 
+      error: 'Currency rates not available yet. Please wait for the next update (runs every 10 minutes).' 
     }, 503)
   } catch (error) {
     console.error('Error fetching currency rate:', error)
@@ -132,9 +132,9 @@ currencyRoutes.get('/convert/:from/:to/:amount', async (c) => {
       })
     }
     
-    // No rate found in DB - currency rates are updated by cron job every hour
+    // No rate found in DB - currency rates are updated by cron job every 10 minutes
     return c.json({ 
-      error: 'Currency rates not available yet. Please wait for the next update (runs every hour).' 
+      error: 'Currency rates not available yet. Please wait for the next update (runs every 10 minutes).' 
     }, 503)
   } catch (error) {
     console.error('Error converting currency:', error)
