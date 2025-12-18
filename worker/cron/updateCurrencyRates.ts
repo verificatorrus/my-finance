@@ -120,12 +120,15 @@ async function insertCurrencyRate(
   rate: number
 ) {
   // Always INSERT new record to keep history
-  await db.insert(currencyRates).values({
+  const result = await db.insert(currencyRates).values({
     fromCurrency,
     toCurrency,
     rate,
     updatedAt: new Date(),
   })
+  
+  console.log(`Inserted rate: ${fromCurrency}→${toCurrency} = ${rate}`)
+  return result
 }
 
 /**
@@ -149,6 +152,7 @@ export async function updateCurrencyRates(db: D1Database, apiKey: string): Promi
     // Save all rates to database (keeping history)
     const drizzleDb = drizzle(db)
     
+    let insertedCount = 0
     for (const rate of rates) {
       await insertCurrencyRate(
         drizzleDb,
@@ -156,9 +160,10 @@ export async function updateCurrencyRates(db: D1Database, apiKey: string): Promi
         rate.toCurrency,
         rate.rate
       )
+      insertedCount++
     }
     
-    console.log('Currency rates updated successfully')
+    console.log(`Currency rates updated successfully. Inserted ${insertedCount} records at ${new Date().toISOString()}`)
   } catch (error) {
     console.error('Error updating currency rates:', error)
     throw error

@@ -12,6 +12,7 @@ import { userRoutes } from './routes/user'
 import { walletRoutes } from './routes/wallet'
 import { currencyRoutes } from './routes/currency'
 import { transactionRoutes } from './routes/transaction'
+import { debugRoutes } from './routes/debug'
 import { updateCurrencyRates } from './cron/updateCurrencyRates'
 
 type Bindings = VerifyFirebaseAuthEnv & {
@@ -129,6 +130,9 @@ app.route('/api/user', userRoutes)
 app.route('/api/wallets', walletRoutes)
 app.route('/api/currency', currencyRoutes)
 app.route('/api/transactions', transactionRoutes)
+
+// Debug routes (public for testing)
+app.route('/api/debug', debugRoutes)
 
 // Error handler
 app.onError((err, c) => {
