@@ -84,7 +84,10 @@ app.get('/api/health', (c) => {
 // Manual trigger for currency rates update (public route for testing)
 app.post('/api/update-rates', async (c) => {
   try {
-    const { updateCurrencyRates } = await import('./cron/updateCurrencyRates')
+    console.log('Manual update triggered at:', new Date().toISOString())
+    console.log('API Key available:', !!c.env.COINMARKETCAP_API_KEY)
+    console.log('DB available:', !!c.env.DB)
+    
     await updateCurrencyRates(c.env.DB, c.env.COINMARKETCAP_API_KEY)
     return c.json({ success: true, message: 'Currency rates updated successfully' })
   } catch (error: any) {
@@ -149,14 +152,19 @@ export default {
     controller: ScheduledController,
     env: Bindings
   ): Promise<void> {
-    console.log('Cron trigger fired:', controller.scheduledTime)
+    console.log('========================================')
+    console.log('Cron trigger fired at:', new Date(controller.scheduledTime).toISOString())
+    console.log('Cron pattern:', controller.cron)
+    console.log('API Key available:', !!env.COINMARKETCAP_API_KEY)
+    console.log('DB available:', !!env.DB)
+    console.log('========================================')
     
     try {
       // Wait for the currency rates update to complete
       await updateCurrencyRates(env.DB, env.COINMARKETCAP_API_KEY)
-      console.log('Currency rates updated successfully via cron')
+      console.log('✅ Currency rates updated successfully via cron')
     } catch (error) {
-      console.error('Failed to update currency rates via cron:', error)
+      console.error('❌ Failed to update currency rates via cron:', error)
       // Don't throw - we want the cron job to continue running
     }
   }
