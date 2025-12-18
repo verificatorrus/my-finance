@@ -9,6 +9,65 @@ type Bindings = {
 
 export const currencyRoutes = new Hono<{ Bindings: Bindings }>()
 
+// Get all current exchange rates at once
+currencyRoutes.get('/rates/all', async (c) => {
+  const db = drizzle(c.env.DB)
+  
+  try {
+    const supportedCurrencies = ['BTC', 'USD', 'EUR', 'KZT']
+    const rates: Record<string, number> = {}
+    
+    // Get all base rates from DB (X -> USD)
+    const baseRates = await db
+      .select()
+      .from(currencyRates)
+      .where(eq(currencyRates.toCurrency, 'USD'))
+      .orderBy(desc(currencyRates.id))
+      .all()
+    
+    // Group by currency and get the latest
+    const latestBaseRates: Record<string, number> = {}
+    const seen = new Set<string>()
+    
+    for (const rate of baseRates) {
+      if (!seen.has(rate.fromCurrency)) {
+        latestBaseRates[rate.fromCurrency] = rate.rate
+        seen.add(rate.fromCurrency)
+      }
+    }
+    
+    // Calculate all currency pairs
+    for (const from of supportedCurrencies) {
+      for (const to of supportedCurrencies) {
+        if (from === to) {
+          rates[`${from}-${to}`] = 1
+          continue
+        }
+        
+        // Direct USD pairs
+        if (from === 'USD' && latestBaseRates[to]) {
+          rates[`${from}-${to}`] = 1 / latestBaseRates[to]
+        } else if (to === 'USD' && latestBaseRates[from]) {
+          rates[`${from}-${to}`] = latestBaseRates[from]
+        } 
+        // Cross-rates
+        else if (latestBaseRates[from] && latestBaseRates[to]) {
+          rates[`${from}-${to}`] = latestBaseRates[from] / latestBaseRates[to]
+        }
+      }
+    }
+    
+    return c.json({
+      rates,
+      cached: true,
+      currencies: supportedCurrencies,
+    })
+  } catch (error: any) {
+    console.error('Error fetching all rates:', error)
+    return c.json({ error: 'Failed to fetch rates' }, 500)
+  }
+})
+
 // Helper function to get latest rate from DB or calculate cross-rate
 async function getRate(db: ReturnType<typeof drizzle>, from: string, to: string): Promise<number | null> {
   // If same currency, rate is 1

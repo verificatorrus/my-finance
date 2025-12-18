@@ -142,29 +142,28 @@ export function CurrencyRates() {
       const token = await getIdToken()
       if (!token) throw new Error('Not authenticated')
 
-      const ratesData: Record<string, CurrencyRate> = {}
+      // Fetch all rates in a single request
+      const response = await fetch('/api/currency/rates/all', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
 
-      // Fetch all currency pairs
-      for (const fromCurr of currencies) {
-        for (const toCurr of currencies) {
-          if (fromCurr.code === toCurr.code) continue
-
-          const response = await fetch(
-            `/api/currency/rate/${fromCurr.code}/${toCurr.code}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          )
-
-          if (response.ok) {
-            const data = await response.json()
-            ratesData[`${fromCurr.code}-${toCurr.code}`] = data
+      if (response.ok) {
+        const data = await response.json()
+        const ratesData: Record<string, CurrencyRate> = {}
+        
+        // Convert flat rates object to expected format
+        for (const [key, rate] of Object.entries(data.rates)) {
+          const [from, to] = key.split('-')
+          ratesData[key] = {
+            from,
+            to,
+            rate: rate as number,
+            cached: data.cached,
           }
         }
+        
+        setRates(ratesData)
       }
-
-      setRates(ratesData)
-      // Don't update lastUpdate here to avoid race condition with loadCurrentRate()
     } catch (err: any) {
       setError(err.message || 'Failed to load currency rates')
     } finally {
