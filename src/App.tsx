@@ -1,57 +1,58 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import cloudflareLogo from './assets/Cloudflare_Logo.svg'
-import './App.css'
+import { AuthProvider } from './contexts/auth'
+import { useAuth } from './hooks/useAuth'
+import { Login } from './components/auth/Login'
+import { SignUp } from './components/auth/SignUp'
+import { ForgotPassword } from './components/auth/ForgotPassword'
+import { Dashboard } from './components/Dashboard'
+import { Box, CircularProgress } from '@mui/material'
+
+type AuthView = 'login' | 'signup' | 'forgot-password'
+
+function AuthFlow() {
+  const [view, setView] = useState<AuthView>('login')
+
+  switch (view) {
+    case 'signup':
+      return <SignUp onSwitchToLogin={() => setView('login')} />
+    case 'forgot-password':
+      return <ForgotPassword onSwitchToLogin={() => setView('login')} />
+    default:
+      return (
+        <Login
+          onSwitchToSignUp={() => setView('signup')}
+          onSwitchToForgotPassword={() => setView('forgot-password')}
+        />
+      )
+  }
+}
+
+function AppContent() {
+  const { currentUser, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  return currentUser ? <Dashboard /> : <AuthFlow />
+}
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [name, setName] = useState('unknown')
-
   return (
-    <>
-      <div>
-        <a href='https://vite.dev' target='_blank'>
-          <img src={viteLogo} className='logo' alt='Vite logo' />
-        </a>
-        <a href='https://react.dev' target='_blank'>
-          <img src={reactLogo} className='logo react' alt='React logo' />
-        </a>
-        <a href='https://workers.cloudflare.com/' target='_blank'>
-          <img src={cloudflareLogo} className='logo cloudflare' alt='Cloudflare logo' />
-        </a>
-      </div>
-      <h1>Vite + React + Cloudflare</h1>
-      <div className='card'>
-        <button
-          onClick={() => setCount((count) => count + 1)}
-          aria-label='increment'
-        >
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <div className='card'>
-        <button
-          onClick={() => {
-            fetch('/api/')
-              .then((res) => res.json() as Promise<{ name: string }>)
-              .then((data) => setName(data.name))
-          }}
-          aria-label='get name'
-        >
-          Name from API is: {name}
-        </button>
-        <p>
-          Edit <code>worker/index.ts</code> to change the name
-        </p>
-      </div>
-      <p className='read-the-docs'>
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 

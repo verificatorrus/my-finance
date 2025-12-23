@@ -6,7 +6,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "my-finance",
 	"main": "worker/index.ts",
-	"compatibility_date": "2025-12-11",
+	"compatibility_date": "2025-12-10",
 	"assets": {
 		"not_found_handling": "single-page-application"
 	},
@@ -14,7 +14,13 @@
 		"enabled": true
 	},
 	"vars": {
-		"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache"
+		"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache",
+		"COINMARKETCAP_API_KEY": "5a4ff464-7772-4c36-8e90-4e223e513874"
+	},
+	"triggers": {
+		"crons": [
+			"0 * * * *"
+		]
 	},
 	/**
 	 * D1 Database
@@ -41,9 +47,13 @@
 	],
 	"env": {
 		"dev": {
-			"name": "planer-dev",
 			"vars": {
 				"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache"
+			},
+			"triggers": {
+				"crons": [
+					"*/10 * * * *"
+				]
 			},
 			"d1_databases": [
 				{
