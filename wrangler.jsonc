@@ -19,7 +19,7 @@
 	},
 	"triggers": {
 		"crons": [
-			"*/10 * * * *"
+			"0 * * * *"
 		]
 	},
 	/**
@@ -48,8 +48,7 @@
 	"env": {
 		"dev": {
 			"vars": {
-				"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache",
-				"COINMARKETCAP_API_KEY": "5a4ff464-7772-4c36-8e90-4e223e513874"
+				"PUBLIC_JWK_CACHE_KEY": "firebase-auth-jwk-cache"
 			},
 			"triggers": {
 				"crons": [

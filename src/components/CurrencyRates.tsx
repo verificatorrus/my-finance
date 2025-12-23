@@ -336,8 +336,8 @@ export function CurrencyRates() {
 
       {/* Info Box */}
       <Alert severity="info" sx={{ mt: 4 }}>
-        Currency rates are automatically updated every 10 minutes using CoinMarketCap API. 
-        All historical data is preserved for tracking. BTC is used as an intermediary to calculate cross-rates between fiat currencies.
+        Currency rates are automatically updated every hour using CoinMarketCap API. 
+        All historical data is preserved for tracking. USD is used as the base currency to calculate all exchange rates.
       </Alert>
     </Container>
   )

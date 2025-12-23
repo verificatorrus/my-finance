@@ -140,7 +140,7 @@ The project is configured with the following Cloudflare bindings:
 
 The project uses Cloudflare Workers Cron Triggers to automatically update currency exchange rates:
 
-- **Schedule**: Every 10 minutes (`*/10 * * * *`)
+- **Schedule**: Every hour (`0 * * * *`)
 - **API**: CoinMarketCap API + ExchangeRate-API
 - **Currencies**: BTC, USD, EUR, KZT
 - **Storage**: All rates are stored in `currency_rates` table with full history
@@ -155,7 +155,7 @@ npm run dev
 curl -X POST "http://localhost:5173/api/update-rates"
 ```
 
-**Database Growth**: With updates every 10 minutes, you'll have ~432 records/day (3 currency pairs × 144 updates).
+**Database Growth**: With updates every hour, you'll have ~72 records/day (3 currency pairs × 24 updates).
 
 **API Endpoints**: 
 - `GET /api/currency/rate/:from/:to` - Get current exchange rate
